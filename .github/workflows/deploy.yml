@@ -24,7 +24,10 @@ jobs:
         continue-on-error: true
 
       - name: Build and start
-        run: cd ./ubuntu-server-test-apps && docker compose up -d --build
+        run: |
+          cd ./ubuntu-server-test-apps
+          cp ~/secrets/traefik-test/.env ./.env
+          docker compose up -d --build
 
       - name: Cleanup old images
         run: docker image prune -f
