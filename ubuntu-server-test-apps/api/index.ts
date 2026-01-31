@@ -23,4 +23,4 @@ const server = Bun.serve({
   },
 });
 
-console.log(`Server running on port ${server.port}`);
+console.log(`Server running on port ${server.port}!`);

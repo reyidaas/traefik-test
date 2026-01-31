@@ -7,6 +7,9 @@ COPY bun.lock ./
 COPY prisma ./
 RUN bun install
 RUN bunx prisma generate
+RUN ls
+RUN ls prisma
+RUN ls prisma/generated
 COPY . .
 EXPOSE 3000
 
