@@ -1,0 +1,38 @@
+name: Deploy to VM
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@4
+
+      - name: Show environment
+        run: |
+          echo "Running on: $(hostname)"
+          echo "User: $(whoami)"
+          echo "Path: $(pwd)"
+
+      - name: Stop containers
+        run: docker compose down
+        continue-on-error: true
+
+      - name: Build and start
+        run: docker compose up -d --build
+
+      - name: Cleanup old images
+        run: docker image prune -f
+
+      - name: Notify success
+        if: success()
+        run: echo "Deployment successful!"
+        
+      - name: Notify failure
+        if: failure()
+        run: echo "Deployment failed!"
