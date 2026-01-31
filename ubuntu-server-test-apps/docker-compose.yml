@@ -1,0 +1,64 @@
+services:
+  api:
+    build: ./api
+    container_name: test-api
+    restart: unless-stopped
+    environment:
+      - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.test-api.rule=Host(`test.mrejdych.com`) && PathPrefix(`/api`)"
+      - "traefik.http.services.test-api.loadbalancer.server.port=3000"
+      - "traefik.http.routers.test-api.middlewares=strip-api"
+      - "traefik.http.middlewares.strip-api.stripprefix.prefixes=/api"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    networks:
+      - proxy
+      - test-internal
+  client:
+    build: ./client
+    container_name: test
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.test.rule=Host(`test.mrejdych.com`)"
+      - "traefik.http.routers.test.priority=1"
+      - "traefik.http.services.test.loadbalancer.server.port=80"
+    networks:
+      - proxy
+  db:
+    image: postgres:16-alpine
+    container_name: test-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - test-internal
+    volumes:
+      - test-volume:/var/lib/postgresql/data
+  migrate:
+    build: ./api
+    container_name: test-migrate
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+    command: bunx prisma migrate deploy
+    networks:
+      - test-internal
+networks:
+  proxy:
+    external: true
+  test-internal:
+volumes:
+  test-volume:
