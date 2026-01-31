@@ -16,6 +16,4 @@ datasource db {
 model Item {
   id String @id @default(uuid())
   content String
-
-  @@map("item")
 }
