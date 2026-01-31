@@ -20,11 +20,11 @@ jobs:
           echo "Path: $(pwd)"
 
       - name: Stop containers
-        run: docker compose down
+        run: cd ./ubuntu-server-test-apps && docker compose down
         continue-on-error: true
 
       - name: Build and start
-        run: docker compose up -d --build
+        run: cd ./ubuntu-server-test-apps && docker compose up -d --build
 
       - name: Cleanup old images
         run: docker image prune -f
