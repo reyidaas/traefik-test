@@ -3,6 +3,11 @@ import reactLogo from './assets/react.svg'
 import viteLogo from '/vite.svg'
 import './App.css'
 
+interface Item {
+  id: string;
+  content: string;
+}
+
 const fetchItems = async () => {
   const response = await fetch('/api/items');
   const items = await response.json();
@@ -11,7 +16,7 @@ const fetchItems = async () => {
 
 function App() {
   const [count, setCount] = useState(0);
-  const [items, setItems] = useState<string[]>([]);
+  const [items, setItems] = useState<Item[]>([]);
   const [value, setValue] = useState('');
 
   useEffect(() => {
@@ -28,6 +33,11 @@ function App() {
       },
       body: JSON.stringify({ item: value }),
     });
+    setItems(await fetchItems());
+  };
+
+  const handleDeleteItem = async (id: string) => {
+    await fetch(`/api/items/${id}`, { method: 'DELETE' });
     setItems(await fetchItems());
   };
 
@@ -61,7 +71,10 @@ function App() {
         <p>Hey look! Here are the fetched items!</p>
         <ul>
           {items.map(item => (
-            <li className="item" key={item}>{item}</li>
+            <li className="item" key={item.id}>
+              <p>{item.content}</p>
+              <button onClick={() => handleDeleteItem(item.id)}>DELETE</button>
+            </li>
           ))}
         </ul>
       </div>
