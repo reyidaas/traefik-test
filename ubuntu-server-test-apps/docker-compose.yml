@@ -7,7 +7,7 @@ services:
       - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.test-api.rule=Host(`${HOTS}`) && PathPrefix(`${API_PREFIX}`)"
+      - "traefik.http.routers.test-api.rule=Host(`${HOST}`) && PathPrefix(`${API_PREFIX}`)"
       - "traefik.http.services.test-api.loadbalancer.server.port=3000"
       - "traefik.http.routers.test-api.middlewares=strip-api"
       - "traefik.http.middlewares.strip-api.stripprefix.prefixes=/api"
