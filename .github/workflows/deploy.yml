@@ -1,41 +1,41 @@
-name: Deploy to VM
-
-on:
-  push:
-    branches: [main]
-  workflow_dispatch:
-
-jobs:
-  deploy:
-    runs-on: self-hosted
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-
-      - name: Show environment
-        run: |
-          echo "Running on: $(hostname)"
-          echo "User: $(whoami)"
-          echo "Path: $(pwd)"
-
-      - name: Stop containers
-        run: cd ./ubuntu-server-test-apps && docker compose down
-        continue-on-error: true
-
-      - name: Build and start
-        run: |
-          cd ./ubuntu-server-test-apps
-          cp ~/secrets/traefik-test/.env ./.env
-          docker compose up -d --build
-
-      - name: Cleanup old images
-        run: docker image prune -f
-
-      - name: Notify success
-        if: success()
-        run: echo "Deployment successful!"
-        
-      - name: Notify failure
-        if: failure()
-        run: echo "Deployment failed!"
+# name: Deploy to VM
+#
+# on:
+#   push:
+#     branches: [main]
+#   workflow_dispatch:
+#
+# jobs:
+#   deploy:
+#     runs-on: self-hosted
+#
+#     steps:
+#       - name: Checkout code
+#         uses: actions/checkout@v6
+#
+#       - name: Show environment
+#         run: |
+#           echo "Running on: $(hostname)"
+#           echo "User: $(whoami)"
+#           echo "Path: $(pwd)"
+#
+#       - name: Stop containers
+#         run: cd ./ubuntu-server-test-apps && docker compose down
+#         continue-on-error: true
+#
+#       - name: Build and start
+#         run: |
+#           cd ./ubuntu-server-test-apps
+#           cp ~/secrets/traefik-test/.env ./.env
+#           docker compose up -d --build
+#
+#       - name: Cleanup old images
+#         run: docker image prune -f
+#
+#       - name: Notify success
+#         if: success()
+#         run: echo "Deployment successful!"
+#
+#       - name: Notify failure
+#         if: failure()
+#         run: echo "Deployment failed!"
