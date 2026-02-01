@@ -13,6 +13,7 @@ steps:
       - name: dockersock
         path: /var/run/docker.sock
     commands:
+      - cd ubuntu-server-test-apps
       - docker-compose down
   - name: build
     image: docker:dind
@@ -20,6 +21,7 @@ steps:
       - name: dockersock
         path: /var/run/docker.sock
     commands:
+      - cd ubuntu-server-test-apps
       - docker-compose build
   - name: deploy
     image: docker:dind
@@ -27,6 +29,7 @@ steps:
       - name: dockersock
         path: /var/run/docker.sock
     commands:
+      - cd ubuntu-server-test-apps
       - docker-compose up -d
   - name: image cleanup
     image: docker:dind
