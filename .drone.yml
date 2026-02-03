@@ -15,6 +15,66 @@ steps:
     commands:
       - cd ubuntu-server-test-apps
       - docker-compose down
+  - name: api-build-for-publish
+    image: docker:dind
+    environment:
+      REGISTRY_URL:
+        from_secret: registry_url
+    volumes:
+      - name: dockersock
+        path: /var/run/docker.sock
+    commands:
+      - cd ubuntu-server-test-apps/api
+      - docker build -t $${REGISTRY_URL}/api-test:${DRONE_COMMIT_SHA:0:8} .
+      - docker tag $${REGISTRY_URL}/api-test:${DRONE_COMMIT_SHA:0:8} $${REGISTRY_URL}/api-test:latest
+  - name: client-build-for-publish
+    image: docker:dind
+    environment:
+      REGISTRY_URL:
+        from_secret: registry_url
+    volumes:
+      - name: dockersock
+        path: /var/run/docker.sock
+    commands:
+      - cd ubuntu-server-test-apps/client
+      - docker build -t $${REGISTRY_URL}/client-test:${DRONE_COMMIT_SHA:0:8} .
+      - docker tag $${REGISTRY_URL}/client-test:${DRONE_COMMIT_SHA:0:8} $${REGISTRY_URL}/client-test:latest
+  - name: publish-api
+    image: docker:dind
+    environment:
+      REGISTRY_URL:
+        from_secret: registry_url
+      REGISTRY_USER:
+        from_secret: registry_user
+      REGISTRY_PASSWORD:
+        from_secret: registry_password
+    volumes:
+      - name: dockersock
+        path: /var/run/docker.sock
+    commands:
+      - echo $$REGISTRY_PASSWORD | docker login $$REGISTRY_URL -u $$REGISTRY_USER --password-stdin
+      - docker push $${REGISTRY_URL}/api-test:${DRONE_COMMIT_SHA:0:8}
+      - docker push $${REGISTRY_URL}/api-test:latest
+    depends_on:
+      - api-build-for-publish
+  - name: publish-client
+    image: docker:dind
+    environment:
+      REGISTRY_URL:
+        from_secret: registry_url
+      REGISTRY_USER:
+        from_secret: registry_user
+      REGISTRY_PASSWORD:
+        from_secret: registry_password
+    volumes:
+      - name: dockersock
+        path: /var/run/docker.sock
+    commands:
+      - echo $$REGISTRY_PASSWORD | docker login $$REGISTRY_URL -u $$REGISTRY_USER --password-stdin
+      - docker push $${REGISTRY_URL}/client-test:${DRONE_COMMIT_SHA:0:8}
+      - docker push $${REGISTRY_URL}/client-test:latest
+    depends_on:
+      - api-build-for-publish
   - name: build
     image: docker:dind
     volumes:
@@ -42,6 +102,8 @@ steps:
     commands:
       - cd ubuntu-server-test-apps
       - docker-compose up -d
+    depends_on:
+      - build
   - name: image cleanup
     image: docker:dind
     volumes:
