@@ -73,7 +73,7 @@ function App() {
           {items.map(item => (
             <li className="item" key={item.id}>
               <p>{item.content}</p>
-              <button style={{ backgroundColor: '#991111' }} onClick={() => handleDeleteItem(item.id)}>DELETE</button>
+              <button style={{ backgroundColor: '#000000' }} onClick={() => handleDeleteItem(item.id)}>DELETE</button>
             </li>
           ))}
         </ul>

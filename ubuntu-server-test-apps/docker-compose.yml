@@ -1,6 +1,6 @@
 services:
   api:
-    build: ./api
+    image: ${REGISTRY_URL}/api-test:latest
     container_name: test-api
     restart: unless-stopped
     environment:
@@ -18,7 +18,7 @@ services:
       - proxy
       - test-internal
   client:
-    build: ./client
+    image: ${REGISTRY_URL}/client-test:latest
     container_name: test
     restart: unless-stopped
     labels:

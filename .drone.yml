@@ -7,7 +7,7 @@ platform:
   arch: arm64
 
 steps:
-  - name: stop containers
+  - name: stop-containers
     image: docker:dind
     volumes:
       - name: dockersock
@@ -74,15 +74,7 @@ steps:
       - docker push $${REGISTRY_URL}/client-test:${DRONE_COMMIT_SHA:0:8}
       - docker push $${REGISTRY_URL}/client-test:latest
     depends_on:
-      - api-build-for-publish
-  - name: build
-    image: docker:dind
-    volumes:
-      - name: dockersock
-        path: /var/run/docker.sock
-    commands:
-      - cd ubuntu-server-test-apps
-      - docker-compose build
+      - client-build-for-publish
   - name: deploy
     image: docker:dind
     volumes:
@@ -99,11 +91,20 @@ steps:
         from_secret: host
       API_PREFIX:
         from_secret: api_prefix
+      REGISTRY_URL:
+        from_secret: registry_url
+      REGISTRY_USER:
+        from_secret: registry_user
+      REGISTRY_PASSWORD:
+        from_secret: registry_password
     commands:
       - cd ubuntu-server-test-apps
+      - echo $$REGISTRY_PASSWORD | docker login $$REGISTRY_URL -u $$REGISTRY_USER --password-stdin
+      - docker compose pull
       - docker-compose up -d
     depends_on:
-      - build
+      - publish-api
+      - publish-client
   - name: image cleanup
     image: docker:dind
     volumes:
