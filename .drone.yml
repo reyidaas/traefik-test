@@ -6,6 +6,19 @@ platform:
   os: linux
   arch: arm64
 
+x-set-env: &set-env |
+  if [ ${DRONE_BRANCH} = "main" ]; then
+    export ENV="prod"
+  elif [ ${DRONE_BRANCH} = "develop" ]; then
+    export ENV="dev"
+  elif [ ${DRONE_BRANCH} = "stage" ]; then
+    export ENV="stage"
+  else
+    echo "No deployment for branch: ${DRONE_BRANCH}"
+    exit 0
+  fi
+  echo "Envoronment: ${ENV}"
+
 steps:
   - name: stop-containers
     image: docker:dind
@@ -13,8 +26,9 @@ steps:
       - name: dockersock
         path: /var/run/docker.sock
     commands:
+      - *set-env
       - cd ubuntu-server-test-apps
-      - docker-compose down
+      - docker-compose -p test-app-$${ENV} down
   - name: api-build-for-publish
     image: docker:dind
     environment:
@@ -24,9 +38,9 @@ steps:
       - name: dockersock
         path: /var/run/docker.sock
     commands:
+      - *set-env
       - cd ubuntu-server-test-apps/api
-      - docker build -t $${REGISTRY_URL}/api-test:${DRONE_COMMIT_SHA:0:8} .
-      - docker tag $${REGISTRY_URL}/api-test:${DRONE_COMMIT_SHA:0:8} $${REGISTRY_URL}/api-test:latest
+      - docker build -t $${REGISTRY_URL}/api-test-$${ENV}:${DRONE_COMMIT_SHA:0:8} -t $${REGISTRY_URL}/api-test-$${ENV}:latest .
   - name: client-build-for-publish
     image: docker:dind
     environment:
@@ -36,9 +50,9 @@ steps:
       - name: dockersock
         path: /var/run/docker.sock
     commands:
+      - *set-env
       - cd ubuntu-server-test-apps/client
-      - docker build -t $${REGISTRY_URL}/client-test:${DRONE_COMMIT_SHA:0:8} .
-      - docker tag $${REGISTRY_URL}/client-test:${DRONE_COMMIT_SHA:0:8} $${REGISTRY_URL}/client-test:latest
+      - docker build -t $${REGISTRY_URL}/client-test-$${ENV}:${DRONE_COMMIT_SHA:0:8} -t $${REGISTRY_URL}/client-test-$${ENV}:latest .
   - name: publish-api
     image: docker:dind
     environment:
@@ -52,9 +66,10 @@ steps:
       - name: dockersock
         path: /var/run/docker.sock
     commands:
+      - *set-env
       - echo $$REGISTRY_PASSWORD | docker login $$REGISTRY_URL -u $$REGISTRY_USER --password-stdin
-      - docker push $${REGISTRY_URL}/api-test:${DRONE_COMMIT_SHA:0:8}
-      - docker push $${REGISTRY_URL}/api-test:latest
+      - docker push $${REGISTRY_URL}/api-test-$${ENV}:${DRONE_COMMIT_SHA:0:8}
+      - docker push $${REGISTRY_URL}/api-test-$${ENV}:latest
     depends_on:
       - api-build-for-publish
   - name: publish-client
@@ -70,25 +85,26 @@ steps:
       - name: dockersock
         path: /var/run/docker.sock
     commands:
+      - *set-env
       - echo $$REGISTRY_PASSWORD | docker login $$REGISTRY_URL -u $$REGISTRY_USER --password-stdin
-      - docker push $${REGISTRY_URL}/client-test:${DRONE_COMMIT_SHA:0:8}
-      - docker push $${REGISTRY_URL}/client-test:latest
+      - docker push $${REGISTRY_URL}/client-test-$${ENV}:${DRONE_COMMIT_SHA:0:8}
+      - docker push $${REGISTRY_URL}/client-test-$${ENV}:latest
     depends_on:
       - client-build-for-publish
-  - name: deploy
+  - name: deploy-prod
     image: docker:dind
     volumes:
       - name: dockersock
         path: /var/run/docker.sock
     environment:
       POSTGRES_DB:
-        from_secret: postgres_db
+        from_secret: postgres_db_prod
       POSTGRES_USER:
-        from_secret: postgres_user
+        from_secret: postgres_user_prod
       POSTGRES_PASSWORD:
-        from_secret: postgres_password
+        from_secret: postgres_password_prod
       HOST:
-        from_secret: host
+        from_secret: host_prod
       API_PREFIX:
         from_secret: api_prefix
       REGISTRY_URL:
@@ -98,13 +114,85 @@ steps:
       REGISTRY_PASSWORD:
         from_secret: registry_password
     commands:
-      - cd ubuntu-server-test-apps
+      - *set-env
       - echo $$REGISTRY_PASSWORD | docker login $$REGISTRY_URL -u $$REGISTRY_USER --password-stdin
-      - docker compose pull
-      - docker-compose up -d
+      - cd ubuntu-server-test-apps
+      - docker compose -p test-app-prod -f docker-compose.base.yml -f docker-compose.prod.yml pull
+      - docker-compose -p test-app-prod -f docker-compose.base.yml -f docker-compose.prod.yml up -d
     depends_on:
       - publish-api
       - publish-client
+    when:
+      branch:
+        - main
+  - name: deploy-dev
+    image: docker:dind
+    volumes:
+      - name: dockersock
+        path: /var/run/docker.sock
+    environment:
+      POSTGRES_DB:
+        from_secret: postgres_db_dev
+      POSTGRES_USER:
+        from_secret: postgres_user_dev
+      POSTGRES_PASSWORD:
+        from_secret: postgres_password_dev
+      HOST:
+        from_secret: host_dev
+      API_PREFIX:
+        from_secret: api_prefix
+      REGISTRY_URL:
+        from_secret: registry_url
+      REGISTRY_USER:
+        from_secret: registry_user
+      REGISTRY_PASSWORD:
+        from_secret: registry_password
+    commands:
+      - *set-env
+      - echo $$REGISTRY_PASSWORD | docker login $$REGISTRY_URL -u $$REGISTRY_USER --password-stdin
+      - cd ubuntu-server-test-apps
+      - docker compose -p test-app-dev -f docker-compose.base.yml -f docker-compose.dev.yml pull
+      - docker-compose -p test-app-dev -f docker-compose.base.yml -f docker-compose.dev.yml up -d
+    depends_on:
+      - publish-api
+      - publish-client
+    when:
+      branch:
+        - develop
+  - name: deploy-stage
+    image: docker:dind
+    volumes:
+      - name: dockersock
+        path: /var/run/docker.sock
+    environment:
+      POSTGRES_DB:
+        from_secret: postgres_db_stage
+      POSTGRES_USER:
+        from_secret: postgres_user_stage
+      POSTGRES_PASSWORD:
+        from_secret: postgres_password_stage
+      HOST:
+        from_secret: host_stage
+      API_PREFIX:
+        from_secret: api_prefix
+      REGISTRY_URL:
+        from_secret: registry_url
+      REGISTRY_USER:
+        from_secret: registry_user
+      REGISTRY_PASSWORD:
+        from_secret: registry_password
+    commands:
+      - *set-env
+      - echo $$REGISTRY_PASSWORD | docker login $$REGISTRY_URL -u $$REGISTRY_USER --password-stdin
+      - cd ubuntu-server-test-apps
+      - docker compose -p test-app-stage -f docker-compose.base.yml -f docker-compose.stage.yml pull
+      - docker-compose -p test-app-stage -f docker-compose.base.yml -f docker-compose.stage.yml up -d
+    depends_on:
+      - publish-api
+      - publish-client
+    when:
+      branch:
+        - stage
   - name: image cleanup
     image: docker:dind
     volumes:
@@ -120,5 +208,7 @@ volumes:
 trigger:
   branch:
     - main
+    - develop
+    - stage
   event:
     - push

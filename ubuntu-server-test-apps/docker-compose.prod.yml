@@ -1,0 +1,6 @@
+networks:
+  test-internal:
+    name: test-internal-prod
+volumes:
+  test-volume:
+    name: test-volume-prod

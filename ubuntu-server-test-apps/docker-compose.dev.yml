@@ -1,0 +1,6 @@
+networks:
+  test-internal:
+    name: test-internal-dev
+volumes:
+  test-volume:
+    name: test-volume-dev
