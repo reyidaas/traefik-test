@@ -39,8 +39,35 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     networks:
       - proxy
+  backup-prepare:
+    image: alpine:latest
+    container_name: drone-backup-prepare
+    restart: unless-stopped
+    volumes:
+      - drone-test-backup:/dumps
+      - drone-test-data:/data
+    entrypoint: sh -c "apk add sqlite && echo '30 1 * * * sqlite3 /data/database.sqlite .backup > /dumps/database-backup.sqlite' | crontab - && crond -f -l 2"
+  backup-cloud:
+    image: mazzolino/restic:latest
+    container_name: drone-backup-cloud
+    restart: unless-stopped
+    environment:
+      - BACKUP_CRON=30 2 * * *
+      - RESTIC_REPOSITORY=${RESTIC_REPOSITORY}/drone
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - RESTIC_PASSWORD=${RESTIC_PASSWORD}
+      - RESTIC_BACKUP_ARGS=--verbose --tag drone
+      - RESTIC_FORGET_ARGS=--keep-daily 7 --keep-weekly 4 --keep-monthly 6
+      - TZ=Europe/Warsaw
+    depends_on:
+      - backup-prepare
+    volumes:
+      - drone-test-backup:/data/dumps:ro
+      - ./:/data/docker:ro
 volumes:
   drone-test-data:
+  drone-test-backup:
 networks:
   proxy:
     external: true

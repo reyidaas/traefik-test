@@ -56,6 +56,40 @@ services:
     command: bunx prisma migrate deploy
     networks:
       - test-internal
+  backup-prepare:
+    image: postgres:16-alpine
+    container_name: backup-prepare
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    entrypoint: sh -c "* * * * * echo 'pg_dump -h db -U $${POSTGRES_USER} -p $${POSTGRES_PASSWORD} $${POSTGRES_DB} > /dumps/database-backup.sql' | crontab - && crond -f -l 2"
+    depends_on:
+      - db
+    volumes:
+      - test-volume:/var/lib/postgresql/data
+      - test-backup:/dumps
+    networks:
+      - test-internal
+  backup:
+    image: mazzolino/restic:latest
+    container_name: backup
+    restart: unless-stopped
+    environment:
+      - BACKUP_CRON=0 4 * * *
+      - RESTIC_REPOSITORY=${RESTIC_REPOSITORY}/test-app
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - RESTIC_PASSWORD=${RESTIC_PASSWORD}
+      - RESTIC_BACKUP_ARGS=--verbose --tag test-app
+      - RESTIC_FORGET_ARGS=--keep-daily 7 --keep-weekly 4 --keep-monthly 6
+      - TZ=Europe/Warsaw
+    depends_on:
+      - backup-prepare
+    volumes:
+      - test-backup:/dumps
+    
 networks:
   proxy:
     external: true

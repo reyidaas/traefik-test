@@ -113,6 +113,14 @@ steps:
         from_secret: registry_user
       REGISTRY_PASSWORD:
         from_secret: registry_password
+      RESTIC_REPOSITORY:
+        from_secret: restic_repository
+      RESTIC_PASSWORD:
+        from_secret: restic_password
+      AWS_ACCESS_KEY_ID:
+        from_secret: aws_access_key_id
+      AWS_SECRET_ACCESS_KEY:
+        from_secret: aws_secret_access_key
     commands:
       - *set-env
       - echo $$REGISTRY_PASSWORD | docker login $$REGISTRY_URL -u $$REGISTRY_USER --password-stdin
@@ -147,6 +155,14 @@ steps:
         from_secret: registry_user
       REGISTRY_PASSWORD:
         from_secret: registry_password
+      RESTIC_REPOSITORY:
+        from_secret: restic_repository
+      RESTIC_PASSWORD:
+        from_secret: restic_password
+      AWS_ACCESS_KEY_ID:
+        from_secret: aws_access_key_id
+      AWS_SECRET_ACCESS_KEY:
+        from_secret: aws_secret_access_key
     commands:
       - *set-env
       - echo $$REGISTRY_PASSWORD | docker login $$REGISTRY_URL -u $$REGISTRY_USER --password-stdin
@@ -181,6 +197,14 @@ steps:
         from_secret: registry_user
       REGISTRY_PASSWORD:
         from_secret: registry_password
+      RESTIC_REPOSITORY:
+        from_secret: restic_repository
+      RESTIC_PASSWORD:
+        from_secret: restic_password
+      AWS_ACCESS_KEY_ID:
+        from_secret: aws_access_key_id
+      AWS_SECRET_ACCESS_KEY:
+        from_secret: aws_secret_access_key
     commands:
       - *set-env
       - echo $$REGISTRY_PASSWORD | docker login $$REGISTRY_URL -u $$REGISTRY_USER --password-stdin

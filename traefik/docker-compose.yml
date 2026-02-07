@@ -4,28 +4,33 @@ services:
     container_name: traefik
     restart: unless-stopped
     command:
-      - "--api.insecure=false"
+      - "--api.insecure=true"
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
       - "--providers.docker.network=proxy"
       - "--entrypoints.web.address=:80"
     ports:
       - "80:80"
+      - "8080:8080"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:
       - proxy
-  cloudflared:
-    image: cloudflare/cloudflared:latest
-    container_name: cloudflared
+  backup-cloud:
+    image: mazzolino/restic:latest
+    container_name: traefik-backup-cloud
     restart: unless-stopped
-    command: tunnel run test
+    environment:
+      - BACKUP_CRON=0 2 * * *
+      - RESTIC_REPOSITORY=${RESTIC_REPOSITORY}/traefik
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - RESTIC_PASSWORD=${RESTIC_PASSWORD}
+      - RESTIC_BACKUP_ARGS=--verbose --tag traefik
+      - RESTIC_FORGET_ARGS=--keep-daily 7 --keep-weekly 4 --keep-monthly 6
+      - TZ=Europe/Warsaw
     volumes:
-      - /home/test/.cloudflared/${TUNNEL_ID}.json:/etc/cloudflared/${TUNNEL_ID}.json:ro
-      - /home/test/.cloudflared/cert.pem:/etc/cloudflared/cert.pem:ro
-      - /home/test/.cloudflared/config.yml:/etc/cloudflared/config.yml:ro
-    networks:
-      - proxy
+      - ./:/data/docker:ro
 networks:
   proxy:
     external: true

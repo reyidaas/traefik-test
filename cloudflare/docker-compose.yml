@@ -1,0 +1,32 @@
+services:
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared
+    restart: unless-stopped
+    command: tunnel run test
+    volumes:
+      - /home/test/.cloudflared/${TUNNEL_ID}.json:/etc/cloudflared/${TUNNEL_ID}.json:ro
+      - /home/test/.cloudflared/cert.pem:/etc/cloudflared/cert.pem:ro
+      - /home/test/.cloudflared/config.yml:/etc/cloudflared/config.yml:ro
+    networks:
+      - proxy
+  backup-cloud:
+    image: mazzolino/restic:latest
+    container_name: cloudflared-backup-cloud
+    restart: unless-stopped
+    environment:
+      - BACKUP_CRON=15 2 * * *
+      - RESTIC_REPOSITORY=${RESTIC_REPOSITORY}/cloudflare
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - RESTIC_PASSWORD=${RESTIC_PASSWORD}
+      - RESTIC_BACKUP_ARGS=--verbose --tag cloudflared
+      - RESTIC_FORGET_ARGS=--keep-daily 7 --keep-weekly 4 --keep-monthly 6
+      - TZ=Europe/Warsaw
+    volumes:
+      - ./:/data/cloudflare/docker:ro
+      - /home/test/.cloudflared:/data/cloudflared:ro
+
+networks:
+  proxy:
+    external: true
