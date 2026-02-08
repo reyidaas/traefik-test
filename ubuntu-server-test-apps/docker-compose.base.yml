@@ -58,13 +58,14 @@ services:
       - test-internal
   backup-prepare:
     image: postgres:16-alpine
-    container_name: backup-prepare
+    container_name: test-app-backup-prepare-${ENV}
     restart: unless-stopped
     environment:
       - POSTGRES_DB=${POSTGRES_DB}
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-    entrypoint: sh -c "* * * * * echo 'pg_dump -h db -U $${POSTGRES_USER} -p $${POSTGRES_PASSWORD} $${POSTGRES_DB} > /dumps/database-backup.sql' | crontab - && crond -f -l 2"
+    entrypoint:
+      sh -c "echo '0 3 * * * pg_dump \"postgres://$${POSTGRES_USER}:$${POSTGRES_PASSWORD}@db:5432/$${POSTGRES_DB}\" > /dumps/database-backup.sql' | crontab - && crond -f -l 2"
     depends_on:
       - db
     volumes:
@@ -74,16 +75,16 @@ services:
       - test-internal
   backup:
     image: mazzolino/restic:latest
-    container_name: backup
+    container_name: test-app-backup-${ENV}
     restart: unless-stopped
     environment:
       - BACKUP_CRON=0 4 * * *
-      - RESTIC_REPOSITORY=${RESTIC_REPOSITORY}/test-app
+      - RESTIC_REPOSITORY=${RESTIC_REPOSITORY}/test-app-${ENV}
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
       - RESTIC_PASSWORD=${RESTIC_PASSWORD}
-      - RESTIC_BACKUP_ARGS=--verbose --tag test-app
-      - RESTIC_FORGET_ARGS=--keep-daily 7 --keep-weekly 4 --keep-monthly 6
+      - RESTIC_BACKUP_ARGS=--verbose --tag test-app-${ENV}
+      - RESTIC_FORGET_ARGS=--keep-daily 7 --keep-weekly 4 --keep-monthly 6 --prune
       - TZ=Europe/Warsaw
     depends_on:
       - backup-prepare

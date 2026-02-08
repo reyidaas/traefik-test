@@ -130,6 +130,7 @@ steps:
     depends_on:
       - publish-api
       - publish-client
+      - stop-containers
     when:
       branch:
         - main
@@ -172,6 +173,7 @@ steps:
     depends_on:
       - publish-api
       - publish-client
+      - stop-containers
     when:
       branch:
         - develop
@@ -214,6 +216,7 @@ steps:
     depends_on:
       - publish-api
       - publish-client
+      - stop-containers
     when:
       branch:
         - stage
